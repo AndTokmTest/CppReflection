@@ -1,0 +1,53 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/cpp
+{
+	"name": "C++ GCC Trunk (16.0.1)",
+
+	// "image": "ubuntu_gcc15_ex_img",
+	"image": "ubuntu_gcc_trunk_img",
+
+	// "build": {
+	//	"dockerfile": "Dockerfile"
+	// }
+
+    // "remoteUser": "test",
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Configure tool-specific properties.
+    "customizations":
+    {
+        "vscode":
+        {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools"
+            ],
+            "settings":
+            {
+                "cmake.cmakePath": "/usr/local/bin/cmake",
+                "cmake.configureEnvironment": {
+                    "CC": "/usr/bin/gcc",
+                    "CXX": "/usr/bin/g++"
+                },
+			    "cmake.configureArgs": [
+			        "-DCMAKE_C_COMPILER=/usr/bin/gcc",
+			        "-DCMAKE_CXX_COMPILER=/usr/bin/c++"
+			    ],                
+                "cmake.generator": "Ninja"
+            }
+        }
+    },
+
+    // Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "gcc -v",
+
+    "postCreateCommand": "cmake --version"
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}

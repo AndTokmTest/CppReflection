@@ -39,3 +39,15 @@
 
 # debug information files
 *.dwo
+
+
+
+# Executables
+*callgrind.out.*
+
+/cmake-build-debug*
+/cmake-build-release*
+/build/*
+/build1/*
+
+.idea/
