@@ -25,7 +25,12 @@
         {
             "extensions": [
                 "ms-vscode.cpptools",
-                "ms-vscode.cmake-tools"
+                "ms-vscode.cmake-tools",
+                "ms-vscode.hexeditor",
+                "donjayamanne.githistory",
+                "mhutchie.git-graph",
+                "usernamehw.errorlens",
+                "redhat.vscode-yaml"
             ],
             "settings":
             {
@@ -44,8 +49,8 @@
     },
 
     // Use 'postCreateCommand' to run commands after the container is created.
+    
 	// "postCreateCommand": "gcc -v",
-
     "postCreateCommand": "cmake --version"
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.

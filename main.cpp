@@ -9,7 +9,6 @@ Description : Tests C++ project
 
 #include <iostream>
 #include <syncstream>
-
 #include <iomanip>
 #include <format>
 #include <print>
@@ -32,7 +31,6 @@ Description : Tests C++ project
 #include <condition_variable>
 #include <source_location>
 
-
 #include <algorithm>
 #include <ranges>
 #include <set>
@@ -43,171 +41,61 @@ Description : Tests C++ project
 #include <unordered_map>
 
 #include <coroutine>
+#include <meta>
 
-#include <unistd.h>
-#include <cerrno>
-#include <filesystem>
-#include <queue>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/uio.h>
-#include <sys/time.h>
-#include <sys/mman.h>
-#include <linux/if.h>
-#include <linux/ip.h>
-#include <netinet/in.h>
-
-
-namespace
+namespace reflection::types
 {
-    struct Integer
+    struct User
     {
-        using value_type = int32_t;
-
-        explicit Integer(value_type v): value { v } {
-            std::println("Integer::Integer({})", value);
-        }
-
-        ~Integer() {
-            std::println("Integer::~Integer({})", value);
-        }
-
-        Integer(const Integer& rhs) : value { rhs.value } {
-            std::println("Integer(const Integer&)({})", value);
-        }
-
-        Integer& operator=(const Integer& rhs) {
-            value = rhs.value;
-            std::println("Integer& Integer::operator=(const Integer&)({})", value);
-            return *this;
-        }
-
-        Integer(Integer&& rhs) noexcept : value { rhs.value }  {
-            std::println("Integer(Integer&&({}) noexcept", value);
-        }
-
-        Integer& operator=(Integer&& rhs) noexcept {
-            value = std::exchange(rhs.value, 0);
-            std::println("Integer& Integer::operator=(Event&&)({}) noexcept", value);
-            return *this;
-        }
-
-        [[nodiscard]]
-        value_type getValue() const noexcept {
-            return value;
-        }
-
-    private:
-
-        value_type value { 0 };
+        std::string name;
+        int age;
     };
 
+    constexpr int max_connections = 100;
 
-    struct Wrapper
+    [[maybe_unused]]
+    void say_hello() { }
+
+
+    [[maybe_unused]]
+    void reflectTypes_Simple()
     {
-        std::unique_ptr<Integer> iPtr { nullptr };
+        // Reflect the struct type 'User'
+         [[maybe_unused]]
+        constexpr std::meta::info user_reflection = ^^User;
 
-        explicit Wrapper(int v): iPtr { std::make_unique<Integer>(v) } {
-            std::println("Wrapper::Wrapper({})", iPtr->getValue());
-        }
+        // Reflect the global variable 'max_connections'
+         [[maybe_unused]]
+        constexpr std::meta::info connections_reflection = ^^max_connections;
 
-        ~Wrapper() {
-            std::println("Wrapper::~Wrapper({})", iPtr->getValue());
-        }
+        // Reflect the free function 'say_hello'
+         [[maybe_unused]]
+        constexpr std::meta::info hello_reflection = ^^say_hello;
 
-        Wrapper(const Wrapper&) {
-            std::println("Wrapper(const Wrapper&)");
-        }
-
-        Wrapper& operator=(const Wrapper&) {
-            std::println("Wrapper& Wrapper::operator=(const Wrapper&)");
-            return *this;
-        }
-
-        Wrapper(Wrapper&&) noexcept {
-            std::println("Wrapper(Wrapper&&) noexcept");
-        }
-
-        Wrapper& operator=(Wrapper&&) noexcept {
-            std::println("Wrapper& Wrapper::operator=(Wrapper&&) noexcept");
-            return *this;
-        }
-    };
-
-}
-
-namespace bit_utils
-{
-    constexpr inline uint8_t charBit { 8 };
-    constexpr inline uint8_t maxSize { sizeof(u_int16_t) * charBit };
-
-    [[nodiscard]]
-    static constexpr bool isSet(const uint16_t mask, const uint16_t index) noexcept {
-        return mask & (1u << index);
+        // Reflect the data member 'age' inside struct 'User'
+         [[maybe_unused]]
+        constexpr std::meta::info user_age_reflection = ^^User::age;
     }
 
-    [[nodiscard]]
-    static constexpr bool isNotSet(const uint16_t mask, const uint16_t index) noexcept {
-        return not isSet(mask, index);
-    }
-
-    static constexpr void unsetBit(uint16_t& mask, const uint16_t bit) noexcept {
-        mask &= ~(1 << bit);
-    };
-
-    static constexpr void setBit(uint16_t& mask, const uint16_t bit) noexcept {
-        mask |= (1 << bit);
-    }
-
-    void printBits(const uint16_t mask)
+    void useReflectedData()
     {
-        std::cout << mask << "  ===>  ";
-        for (int i = (sizeof(uint16_t) * charBit) - 1; i >= 0; --i)
-            std::cout << (mask & (1u << i) ? '1' : '0');
-        std::cout << std::endl;
+        constexpr std::meta::info int_reflection = ^^int;
+        constexpr std::meta::info double_reflection = ^^double;
+        constexpr std::meta::info string_reflection = ^^std::string;
+
+        typename [: int_reflection :] number = 100;
+        typename [: double_reflection :] pi = 3.14;
+        typename [: string_reflection :] message = "Hello Reflection";
+
+        std::cout << "Number: " << number << std::endl;
+        std::cout << "Pi: " << pi << std::endl;
+        std::cout << "Message: " << message << std::endl;
+
+        // Number: 100
+        // Pi: 3.14
+        // Message: Hello Reflection
     }
 }
-
-
-namespace demos
-{
-    struct ConstParam
-    {
-        int val { 0 };
-
-        constexpr ConstParam() = default;
-        constexpr explicit ConstParam(const int v): val { v } {
-        }
-
-        [[nodiscard]]
-        constexpr int value() const noexcept {
-            return val;
-        }
-    };
-
-
-    template<ConstParam First = {}, ConstParam Second = {}>
-    void sum(decltype(First), decltype(Second), int x)
-    {
-        if constexpr (First.value() == 1) {
-            std::printf("FIRST IS ONE\n");
-        }
-
-        if constexpr (Second.value() == 2) {
-            std::printf("SECOND IS TWO\n");
-        }
-
-        std::printf("SUM: %d\n", First.value() + Second.value() + x);
-    }
-
-
-    void test()
-    {
-        // demos::test();
-    }
-}
-
 
 
 int main(const int argc,
@@ -226,9 +114,11 @@ int main(const int argc,
         return envs;
     }();
 
+    using namespace reflection;
 
-    Integer v { 42 };
 
+    types::reflectTypes_Simple();
+    types::useReflectedData();
 
     return EXIT_SUCCESS;
 }
