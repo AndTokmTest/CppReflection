@@ -78,11 +78,20 @@ namespace reflection::types
 {
     constexpr int max_connections = 100;
 
-    [[maybe_unused]]
     void say_hello() { }
 
 
-    [[maybe_unused]]
+    void basics()
+    {
+        constexpr auto r = ^^int;
+
+        typename[:r:] i = 42;       // Same as: int x = 42;
+        static_assert(std::is_same_v<decltype(i), int>);
+
+        typename[:^^char:] c = '*';  // Same as: char c = '*';
+        static_assert(std::is_same_v<decltype(c), char>);
+    }
+
     void reflectTypes_Simple()
     {
         // Reflect the struct type 'User'
@@ -271,6 +280,45 @@ namespace reflection::enums
     }
 }
 
+namespace reflection::enums
+{
+    enum class Color
+    {
+        Transparent,
+        Red = 2,
+        Green,
+        Blue = 8,
+        Yellow
+    };
+
+    // https://compiler-explorer.com/z/W8b9xrx5j
+    // https://andreasfertig.com/blog/2025/08/cpp26-reflection-at-compile-time/?trk=feed_main-feed-card_feed-article-content
+
+    template<typename E>
+    requires std::is_enum_v<E>
+    constexpr inline auto num_enumerators_of {
+        std::meta::enumerators_of(^^E).size()
+    };
+
+    template<typename E>
+    requires std::is_enum_v<E>
+    consteval auto get_enum_values() -> decltype(auto)
+    {
+        std::array<E, num_enumerators_of<E>> res;
+        template for(size_t i{}; constexpr auto& e : std::define_static_array(std::meta::enumerators_of(^^E)))
+        {
+            res[i++] = [:e:];
+        }
+        return res;
+    }
+
+    void enumerateValues()
+    {
+        for(const auto e : get_enum_values<Color>()) {
+            std::println("{} ", std::to_underlying(e));
+        }
+    }
+}
 
 namespace reflection::checking_type
 {
@@ -292,6 +340,45 @@ namespace reflection::checking_type
 }
 
 
+namespace reflection::splicers
+{
+    void type_Aliases()
+    {
+        constexpr auto r = ^^int;
+        typename[:r:] x = 42;
+
+        static_assert(std::is_same_v<decltype(x), int>);
+    }
+}
+
+namespace reflection::serialization
+{
+    struct Point2D
+    {
+        double x { 0.0 };
+        double y { 0.0 };
+    };
+
+    template <typename T>
+    void format(T const& t)
+    {
+        std::cout << identifier_of(^^T) << "{ ";
+        constexpr auto access_ctx = std::meta::access_context::unchecked();
+
+        template for (constexpr auto mem : std::define_static_array(nonstatic_data_members_of(^^T, access_ctx))) {
+            std::cout << std::format("{} = {}, ", identifier_of(mem), t.[:mem:]);
+        }
+
+        std::cout << "}\n";
+    }
+
+    void simpleType()
+    { 
+        format(Point2D{.x = 3.0, .y = 4.0}); 
+    }
+}
+
+
 
 int main(const int argc,
          char** argv,
@@ -299,19 +386,24 @@ int main(const int argc,
 {
     using namespace reflection;
 
-
-    // types::reflectTypes_Simple();
-    // types::useReflectedData();
-    // types::deduce_Type_of_Vector<int>();
-    // types::deduce_Type_of_Vector<double>();
+    types::basics();
+    types::reflectTypes_Simple();
+    types::useReflectedData();
+    types::deduce_Type_of_Vector<int>();
+    types::deduce_Type_of_Vector<double>();
 
     // get_data_member_0::retrieve_Data_Members_Names();
     // get_data_member_1::demo();
 
     // enums::printValues_Simple();
     // enums::printValues_Complex();
+    // enums::enumerateValues();
 
-    checking_type::is_complete_type();
+    // checking_type::is_complete_type();
+
+    // splicers::type_Aliases();
+
+    // serialization::simpleType();
 
     return EXIT_SUCCESS;
 }
