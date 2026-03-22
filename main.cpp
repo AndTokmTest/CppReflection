@@ -143,6 +143,56 @@ namespace reflection::types
 
         // Output: 1 2 3
     }
+
+    template <typename T>
+    struct MyVec
+    {
+        std::array<T, 3> data;
+    };
+
+    template <typename Key, typename Value>
+    struct MyMap
+    {
+        Key key;
+        Value value;
+    };
+
+    void Create_New_Type()
+    {
+        // Reflect the individual types we'll need
+        constexpr std::meta::info key_info     = ^^int;       // Get meta info for 'int'
+        constexpr std::meta::info vec_template = ^^MyVec;     // Get meta info for the template 'MyVec'
+        constexpr std::meta::info value_arg    = ^^double;    // Get meta info for 'double'
+
+        // Use reflection to create the type MyVec<double>
+        // This "fills in" the template MyVec<T> with T = double
+        constexpr std::meta::info vec_info = std::meta::substitute(vec_template, {value_arg});
+
+        // Use reflection to create the type MyMap<int, MyVec<double>>
+        // This creates a reflected instantiation of MyMap with the previous types
+        constexpr std::meta::info map_info = std::meta::substitute(^^MyMap, {key_info, vec_info});
+
+        // Splice the reflected type into real C++ code using [: :]
+        // This gives us a real usable type: MyMap<int, MyVec<double>>
+        typename [:map_info:] obj = {
+            7,                              // obj.key = 7
+            { {1.1, 2.2, 3.3} }             // obj.value = MyVec<double> with 3 doubles
+        };
+
+        // Use the object like any normal type
+        std::cout << "Key: " << obj.key << std::endl;
+        std::cout << "Values:\n";
+        for (double v : obj.value.data)  // Loop through the MyVec's data array
+            std::cout << v << '\n';
+
+        /*
+        Key: 7
+        Values:
+        1.1
+        2.2
+        3.3
+        */
+    }
 }
 
 
@@ -386,11 +436,12 @@ int main(const int argc,
 {
     using namespace reflection;
 
-    types::basics();
-    types::reflectTypes_Simple();
-    types::useReflectedData();
-    types::deduce_Type_of_Vector<int>();
-    types::deduce_Type_of_Vector<double>();
+    // types::basics();
+    // types::reflectTypes_Simple();
+    // types::useReflectedData();
+    // types::deduce_Type_of_Vector<int>();
+    // types::deduce_Type_of_Vector<double>();
+    types::Create_New_Type();
 
     // get_data_member_0::retrieve_Data_Members_Names();
     // get_data_member_1::demo();
