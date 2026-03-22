@@ -43,14 +43,39 @@ Description : Tests C++ project
 #include <coroutine>
 #include <meta>
 
-namespace reflection::types
+namespace reflection
 {
     struct User
     {
         std::string name;
-        int age;
+        int age { 0 };
     };
 
+    enum class RGB {
+        Red,
+        Blue,
+        Green
+    };
+
+    enum class Color {
+        Red,
+        Green,
+        Blue,
+        Yellow,
+        Purple
+    };
+
+    enum class Animal {
+        Cat,
+        Dog,
+        Horse,
+        Rabbit,
+        Snail
+    };
+}
+
+namespace reflection::types
+{
     constexpr int max_connections = 100;
 
     [[maybe_unused]]
@@ -87,38 +112,206 @@ namespace reflection::types
         typename [: double_reflection :] pi = 3.14;
         typename [: string_reflection :] message = "Hello Reflection";
 
-        std::cout << "Number: " << number << std::endl;
-        std::cout << "Pi: " << pi << std::endl;
-        std::cout << "Message: " << message << std::endl;
+        std::cout << "Number: " << number << " of type " << typeid(number).name() << std::endl;
+        std::cout << "Pi: " << pi  << " of type " << typeid(pi).name() << std::endl;
+        std::cout << "Message: " << message  << " of type " << typeid(message).name() << std::endl;
 
         // Number: 100
         // Pi: 3.14
         // Message: Hello Reflection
     }
+
+
+    template <typename T>
+    void deduce_Type_of_Vector()
+    {
+        constexpr auto vec = ^^std::vector<T>;
+        typename [: vec :] x = { T(1), T(2), T(3)};
+        for (const auto& elem : x) {
+            std::cout << elem << " ";
+        }
+        std::cout << std::endl;
+
+        // Output: 1 2 3
+    }
 }
+
+
+namespace reflection::get_data_member_0
+{
+    void retrieve_Data_Members_Names()
+    {
+        // Reflect the type User
+        constexpr std::meta::info user_reflection = ^^User;
+
+        // Retrieve the name of the reflected type
+        std::cout << "Type: " << std::meta::identifier_of(user_reflection) << std::endl;
+
+        /*
+        // Reflect and list the non-static data members
+        [: expand(std::meta::nonstatic_data_members_of(user_reflection)) :] >>
+        [&]<std::meta::info member>() {
+            std::cout << " Member: " << std::meta::identifier_of(member) << std::endl;
+        };
+        */
+    }
+}
+
+namespace reflection::get_data_member_1
+{
+    consteval auto data_members_of(const std::meta::info& info)
+    {
+        constexpr auto ctx = std::meta::access_context::current();
+        return std::define_static_array(std::meta::nonstatic_data_members_of(info, ctx));
+    }
+
+    void demo()
+    {
+        template for( auto constexpr m: data_members_of(^^User) ) {   //***
+            println( "member named: {}", std::meta::display_string_of(m) );
+        }
+
+        /*
+        member named: reflection::User::name
+        member named: reflection::User::age
+        */
+    }
+}
+
+namespace reflection::enums
+{
+    void printValues_Simple()
+    {
+        template for(constexpr auto color : std::define_static_array(std::meta::enumerators_of(^^Color)))
+        {
+            constexpr std::string_view colorName = std::meta::identifier_of(color);
+            std::println("{}", colorName);
+        }
+
+        /*
+        Green
+        Blue
+        Yellow
+        Purple
+        */
+    }
+}
+
+namespace reflection::enums
+{
+    template<typename E>
+    requires std::is_enum_v<E>
+    consteval auto enumerators_of()
+    {
+        return []<size_t ... I>(std::index_sequence<I...>)
+        {
+            return std::array{[:enumerators_of(^^E)[I]:] ...};
+        }
+        (std::make_index_sequence<enumerators_of(^^E).size()>{});
+    }
+
+    template<typename E>
+    requires std::is_enum_v<E>
+    consteval auto identifiers_of()
+    {
+        return []<size_t ... I>(std::index_sequence<I...>)
+        {
+            return std::array{std::string_view(identifier_of(enumerators_of(^^E)[I])) ...};
+        }
+        (std::make_index_sequence<enumerators_of(^^E).size()>{});
+    }
+
+    template<typename E>
+        requires std::is_enum_v<E>
+    const auto& to_string(E value)
+    {
+        static const auto toStringMap = [] static
+        {
+            static constexpr auto AllValues = enumerators_of<E>();
+            static constexpr auto AllStrings = identifiers_of<E>();
+            static std::unordered_map<E, const std::string> result;
+            for(const auto& [enumValue, string] : std::ranges::zip_view(AllValues, AllStrings))
+                result.emplace(enumValue, string);
+            return result;
+        }();
+        return toStringMap.at(value);
+    }
+
+    template<typename E>
+    requires std::is_enum_v<E>
+    std::ostream& operator<<(std::ostream& s, E value)
+    {
+        s << to_string(value);
+        return s;
+    }
+
+    void printValues_Complex()
+    {
+        for(const auto color : enumerators_of<Color>())
+            std::cout << color << std::endl;
+
+        std::cout << std::endl;
+
+        for(const auto animal : enumerators_of<Animal>())
+            std::cout << animal << std::endl;
+
+        /*
+        Red
+        Green
+        Blue
+        Yellow
+        Purple
+
+        Cat
+        Dog
+        Horse
+        Rabbit
+        Snail
+        */
+    }
+}
+
+
+namespace reflection::checking_type
+{
+    class A;
+
+    class B
+    {
+        int a;
+    };
+
+    void is_complete_type()
+    {
+        constexpr std::meta::info aInfo = ^^A;
+        constexpr std::meta::info bInfo = ^^B;
+
+        std::println("Is 'A' complete type: {}", std::meta::is_complete_type(aInfo));
+        std::println("Is 'B' complete type: {}", std::meta::is_complete_type(bInfo));
+    }
+}
+
 
 
 int main(const int argc,
          char** argv,
          char** environment)
 {
-    const std::vector<std::string_view> args(argv + 1, argv + argc);
-    const std::map<std::string_view, std::string_view> env = [&] {
-        std::map<std::string_view, std::string_view> envs;
-        for (int i = 0; environment && environment[i]; ++i) {
-            const std::string_view envVar = environment[i];
-            if (const size_t pos = envVar.find('='); std::string::npos != pos) {
-                envs.emplace(envVar.substr(0, pos), envVar.substr(pos + 1));
-            }
-        }
-        return envs;
-    }();
-
     using namespace reflection;
 
 
-    types::reflectTypes_Simple();
-    types::useReflectedData();
+    // types::reflectTypes_Simple();
+    // types::useReflectedData();
+    // types::deduce_Type_of_Vector<int>();
+    // types::deduce_Type_of_Vector<double>();
+
+    // get_data_member_0::retrieve_Data_Members_Names();
+    // get_data_member_1::demo();
+
+    // enums::printValues_Simple();
+    // enums::printValues_Complex();
+
+    checking_type::is_complete_type();
 
     return EXIT_SUCCESS;
 }
